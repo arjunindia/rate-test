@@ -4,15 +4,15 @@ use axum::{
     routing::get,
     Router,
 };
+use compio::net::TcpListener;
 use sled::Db;
 use std::sync::Arc;
-use tokio::net::TcpListener;
 static BODY: &'static str = include_str!("../hello.html");
 static _404: &'static str = include_str!("../404.html");
 struct AppState {
     db: Db,
 }
-#[axum::debug_handler]
+
 async fn handle_db_read(
     Path(id): Path<String>,
     State(appstate): State<Arc<AppState>>,
@@ -22,7 +22,7 @@ async fn handle_db_read(
     response::Html(format!("Value: {}", String::from_utf8_lossy(&value)))
 }
 
-#[tokio::main]
+#[compio::main]
 async fn main() {
     let appstate = Arc::new(AppState {
         db: sled::open("my_db").unwrap(),
@@ -36,7 +36,7 @@ async fn main() {
                 let db = &appstate.clone().db;
                 let id = db.generate_id().unwrap();
                 db.insert(&id.to_be_bytes(), &id.to_be_bytes()).unwrap();
-                response::Html(format!("Inserted key: {}", id))
+                response::Html(format!("Inserted: {}", id))
             }),
         )
         .route("/db/{id}", get(handle_db_read))
@@ -44,5 +44,5 @@ async fn main() {
         .with_state(appstate);
     let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
-    axum::serve(listener, app).await.unwrap();
+    cyper_axum::serve(listener, app).await.unwrap();
 }
