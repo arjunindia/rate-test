@@ -2,6 +2,7 @@ use axum::{
     extract::{Path, State},
     response,
     routing::get,
+    routing::post,
     Router,
 };
 use sled::Db;
@@ -45,16 +46,16 @@ async fn main() {
     // build our application with a single route
     let app = Router::new()
         .route("/", get(|| async { response::Html(BODY) }))
+        .route("/db/{id}", get(handle_db_read))
         .route(
-            "/db",
-            get(|appstate: State<Arc<AppState>>| async move {
+            "/create",
+            post(|appstate: State<Arc<AppState>>| async move {
                 let db = &appstate.db;
                 let id = db.generate_id().unwrap();
                 db.insert(id.to_be_bytes(), b"Hello, World!").unwrap();
                 response::Html(format!("Inserted: {}", id))
             }),
         )
-        .route("/db/{id}", get(handle_db_read))
         .route("/404", get(|| async { response::Html(_404) }))
         .with_state(Arc::new(appstate));
     let listener = TcpListener::bind((IpAddr::V4(Ipv4Addr::LOCALHOST), 8080))
